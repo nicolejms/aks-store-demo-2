@@ -26,6 +26,11 @@ on:
         description: 'Name of the application or environment to delete'
         type: string
         required: true
+      force:
+        description: 'Force the delete even if resources are stuck in a non-terminal state (may orphan external resources)'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   id-token: write
@@ -93,7 +98,7 @@ jobs:
             --file "$RADIUS_TARGET_KUBECONFIG"
 
       - name: Set up control plane
-        uses: radius-project/ai-extensions/.github/extension/actions/setup-control-plane@dfe9cc4967fa359940e00e1c042a5909272662b0
+        uses: radius-project/ai-extensions/.github/extension/actions/setup-control-plane@94c58fbe1d379478d02fe632d0d86bb029efa1fc
 
       - name: Project cloud OIDC tokens into Radius pods
         run: |
@@ -151,7 +156,7 @@ jobs:
 
       - name: Restore Radius state
         id: restore-state
-        uses: radius-project/ai-extensions/.github/extension/actions/restore-state@dfe9cc4967fa359940e00e1c042a5909272662b0
+        uses: radius-project/ai-extensions/.github/extension/actions/restore-state@94c58fbe1d379478d02fe632d0d86bb029efa1fc
         with:
           namespace: ${{ vars.KUBERNETES_NAMESPACE || 'default' }}
 
@@ -168,14 +173,15 @@ jobs:
           echo "✅ Cloud credentials registered with Radius."
 
       - name: Delete Radius resource
-        uses: radius-project/ai-extensions/.github/extension/actions/delete-resource@dfe9cc4967fa359940e00e1c042a5909272662b0
+        uses: radius-project/ai-extensions/.github/extension/actions/delete-resource@94c58fbe1d379478d02fe632d0d86bb029efa1fc
         with:
           resource-type: ${{ inputs.resource_type }}
           name: ${{ inputs.name }}
+          force: ${{ inputs.force }}
           azure-oidc-token-refresh: "${{ vars.AZURE_CLIENT_ID != '' }}"
 
       - name: Teardown
         if: always()
-        uses: radius-project/ai-extensions/.github/extension/actions/teardown@dfe9cc4967fa359940e00e1c042a5909272662b0
+        uses: radius-project/ai-extensions/.github/extension/actions/teardown@94c58fbe1d379478d02fe632d0d86bb029efa1fc
         with:
           state-restored: ${{ steps.restore-state.outputs.state-restored }}
