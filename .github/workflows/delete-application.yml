@@ -28,6 +28,10 @@ permissions:
   id-token: write
   contents: write
   packages: write
+  # Granted so the reusable delete workflow can remove the deploy-status
+  # artifact describing the deleted application's last deployment. A called
+  # workflow can never hold more permission than its caller.
+  actions: write
 
 jobs:
   # Bind to the GitHub Environment so environment-scoped variables are visible, then
@@ -43,10 +47,17 @@ jobs:
     steps:
       - name: Determine provider from environment variables
         id: detect
+        env:
+          # Read from the environment rather than interpolated into the shell
+          # source, so a crafted value cannot execute commands in this
+          # OIDC + write job. This job gates the provider workflows, so it runs
+          # before any of them and holds the same permissions.
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
         run: |
-          if [ -n "${{ vars.AZURE_CLIENT_ID }}" ]; then
+          if [ -n "$AZURE_CLIENT_ID" ]; then
             echo "provider=azure" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ vars.AWS_ROLE_ARN }}" ]; then
+          elif [ -n "$AWS_ROLE_ARN" ]; then
             echo "provider=aws" >> "$GITHUB_OUTPUT"
           else
             echo "No AZURE_CLIENT_ID or AWS_ROLE_ARN set on this environment." >&2
